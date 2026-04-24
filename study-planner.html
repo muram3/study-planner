@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学習計画管理</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#1a3a5c">
+<link rel="icon" type="image/svg+xml" href="./icon.svg">
+<link rel="apple-touch-icon" href="./icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="学習計画">
+<script src="https://apis.google.com/js/api.js" defer></script>
+<script src="https://accounts.google.com/gsi/client" defer></script>
+<style>
+:root{--primary:#1a3a5c;--primary-light:#2d5f8a;--accent:#e8913a;--success:#2e7d32;--warning:#f9a825;--danger:#c62828;--bg:#f5f7fa;--card:#fff;--text:#1a1a2e;--text-light:#5a6070;--border:#dde1e7}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+header{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;padding:16px 24px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+header h1{font-size:1.2rem;font-weight:700} .hdr-info{font-size:.82rem;opacity:.9;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.hdr-info select{padding:3px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:#fff;font-size:.82rem;font-weight:600;cursor:pointer}
+.hdr-info select option{color:var(--text);background:#fff}
+#sync-status{padding:3px 8px;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);user-select:none}
+#sync-status.sync-ok{background:rgba(46,125,50,.4);border-color:rgba(120,220,120,.5)}
+#sync-status.sync-busy{background:rgba(245,158,11,.4);border-color:rgba(245,200,100,.5)}
+#sync-status.sync-err{background:rgba(200,40,40,.4);border-color:rgba(255,120,120,.5)}
+#sync-status.sync-off{background:rgba(100,100,100,.3);border-color:rgba(200,200,200,.3)}
+.tabs{display:flex;background:var(--card);border-bottom:2px solid var(--border);overflow-x:auto;position:sticky;top:56px;z-index:99}
+.tab{padding:11px 18px;cursor:pointer;font-size:.85rem;font-weight:600;white-space:nowrap;border-bottom:3px solid transparent;color:var(--text-light);transition:background .15s,color .15s,border-color .15s}
+.tab:hover{background:#f0f2f5;color:var(--primary)} .tab.active{color:var(--primary);border-bottom-color:var(--accent);background:#fff}
+.container{max-width:1100px;margin:0 auto;padding:20px}
+.page{display:none} .page.active{display:block}
+.card{background:var(--card);border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);transition:box-shadow .15s}
+.card h3{font-size:1rem;margin-bottom:12px;color:var(--primary);display:flex;align-items:center;gap:6px}
+.card h3::before{content:'';display:inline-block;width:4px;height:16px;background:var(--accent);border-radius:2px}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border-radius:12px;padding:14px 10px;box-shadow:0 1px 4px rgba(0,0,0,.08);text-align:center;transition:transform .15s,box-shadow .15s;border-top:3px solid transparent}
+.stat:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.stat .num{font-size:1.6rem;font-weight:800;line-height:1.15} .stat .label{font-size:.72rem;color:var(--text-light);margin-top:3px;font-weight:600}
+.req-table{width:100%;border-collapse:collapse;font-size:.84rem;margin-top:8px}
+.req-table th,.req-table td{padding:7px 10px;text-align:left;border-bottom:1px solid #eee}
+.req-table th{background:#f8f9fb;color:var(--text-light);font-weight:600;font-size:.76rem;white-space:nowrap}
+.req-table .ok{color:var(--success);font-weight:700;white-space:nowrap} .req-table .ng{color:var(--danger);font-weight:700;white-space:nowrap}
+.req-bar{height:8px;background:#e8eaed;border-radius:4px;overflow:hidden;min-width:80px}
+.req-bar-fill{height:100%;border-radius:4px;transition:width .4s}
+.progress-bar{height:26px;background:#e8eaed;border-radius:13px;overflow:hidden;display:flex}
+.progress-bar .seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;transition:width .5s}
+.seg.done{background:var(--success)} .seg.exam{background:#1976d2} .seg.report{background:var(--accent)} .seg.wip{background:var(--warning)}
+.legend{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;font-size:.76rem}
+.legend span::before{content:'';display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:middle}
+.lg-done::before{background:var(--success)!important} .lg-exam::before{background:#1976d2!important} .lg-report::before{background:var(--accent)!important} .lg-wip::before{background:var(--warning)!important} .lg-no::before{background:#e8eaed!important}
+.alert{border-left:4px solid var(--accent);border-radius:8px;padding:14px 18px;margin-bottom:16px}
+.alert-warn{background:linear-gradient(135deg,#fff3e0,#ffe0b2);border-left-color:var(--accent)}
+.alert-danger{background:linear-gradient(135deg,#fce4ec,#ffcdd2);border-left-color:var(--danger)}
+.alert h4{font-size:.9rem;margin-bottom:4px} .alert p{font-size:.82rem}
+.sec-title{font-size:.95rem;font-weight:700;margin:20px 0 10px;padding-bottom:5px;border-bottom:2px solid var(--primary);color:var(--primary)}
+.subj{background:var(--card);border-radius:10px;padding:12px 14px;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;align-items:center;gap:8px;flex-wrap:wrap;transition:transform .15s,box-shadow .15s;border-left:3px solid transparent}
+.subj:hover{transform:translateX(2px);box-shadow:0 2px 10px rgba(0,0,0,.1);border-left-color:var(--accent)}
+.subj.locked{opacity:.45;pointer-events:none}
+.subj-name{flex:1;min-width:150px;font-weight:600;font-size:.88rem}
+.subj-meta{font-size:.74rem;color:var(--text-light);min-width:85px}
+.subj-req{font-size:.7rem;padding:2px 7px;border-radius:4px;font-weight:600}
+.req-senhissu{background:#e3f2fd;color:#1565c0} .req-sentaku{background:#f5f5f5;color:#666}
+.sel{padding:4px 7px;border-radius:6px;border:1px solid var(--border);font-size:.78rem;cursor:pointer;font-weight:600;min-width:120px}
+.sel.s0{background:#f5f5f5;color:#888} .sel.s1{background:#fff8e1;color:#f57f17} .sel.s2{background:#fff3e0;color:#e65100} .sel.s3{background:#e3f2fd;color:#1565c0} .sel.s4{background:#e8f5e9;color:#2e7d32}
+.subj-note{width:100%;margin-top:3px}
+.subj-note input{width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:.78rem;background:#fafbfc}
+.subj-note input:focus{outline:none;border-color:var(--primary-light);background:#fff}
+.tb-row{width:100%;margin-top:5px;padding:6px 10px;background:#f4f6fb;border-radius:7px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.76rem}
+.tb-title{flex:1;min-width:160px;color:var(--text-light)}
+.tb-title strong{color:var(--text);font-weight:600;margin-right:4px}
+.tb-got-label{display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;font-weight:600;color:var(--text-light)}
+.tb-got-label input[type=checkbox]{accent-color:var(--success);width:14px;height:14px;cursor:pointer}
+.tb-got-label.checked{color:var(--success)}
+.tb-links{display:flex;gap:4px}
+.tb-link{padding:2px 8px;border-radius:4px;font-size:.72rem;font-weight:600;text-decoration:none;border:1px solid;cursor:pointer}
+.tb-link-amz{background:#ff9900;color:#fff;border-color:#e68a00}
+.tb-link-cinii{background:#1565c0;color:#fff;border-color:#0d47a1}
+.tb-link-google{background:#4285f4;color:#fff;border-color:#3367d6}
+.tb-nodata{color:#bbb;font-style:italic}
+.tb-row-got{background:#f0f9f0;border-left:3px solid var(--success)}
+.tb-haibon{background:#e3f2fd!important}
+.tb-link-syl{background:#6a1b9a;color:#fff;border-color:#4a148c}
+.tb-link{transition:transform .1s,box-shadow .1s} .tb-link:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.si-link-syl{color:#6a1b9a;font-weight:600;text-decoration:none}.si-link-syl:hover{text-decoration:underline}
+.home-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:18px;align-items:start}
+@media(max-width:960px){.home-grid{grid-template-columns:1fr}}
+.cal-past-toggle{text-align:center;padding:8px;margin-bottom:8px;color:var(--text-light);font-size:.78rem;cursor:pointer;border-radius:8px;background:#f8f9fb;border:1px dashed var(--border)}
+.cal-past-toggle:hover{background:#f0f2f5;color:var(--primary)}
+.cal-past-wrap{display:none}
+.cal-past-wrap.show{display:block}
+.filters{display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap;align-items:flex-start}
+.fbtn{padding:4px 11px;border-radius:20px;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:.78rem;font-weight:600}
+.fbtn:hover{border-color:var(--primary)} .fbtn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.filter-group{position:relative;display:inline-block}
+.filter-group .fbtn.parent{display:flex;align-items:center;gap:3px}
+.filter-group .fbtn.parent::after{content:'▾';font-size:.65rem;margin-left:2px}
+.filter-group .fbtn.parent.open::after{content:'▴'}
+.filter-group .fbtn.parent.child-active{background:#e3f2fd;color:var(--primary);border-color:var(--primary)}
+.filter-dd{display:none;position:absolute;top:100%;left:0;margin-top:4px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);padding:4px;z-index:50;min-width:120px;white-space:nowrap}
+.filter-dd.show{display:flex;flex-direction:column;gap:2px}
+.filter-dd .fbtn{border-radius:6px;text-align:left;width:100%}
+.cal-item{padding:10px 14px;border-radius:8px;margin-bottom:6px;display:flex;align-items:flex-start;gap:10px;font-size:.84rem}
+.cal-item.ci-past{background:#fafafa;border:1px solid #eee}
+.cal-item.ci-now{background:#fff8f0;border:1px solid var(--accent);box-shadow:0 0 0 2px rgba(232,145,58,.15)}
+.cal-item.ci-future{background:#f8faff;border:1px solid #dde5f0}
+.cal-dates{background:var(--primary);color:#fff;padding:4px 10px;border-radius:6px;font-size:.76rem;font-weight:600;white-space:nowrap;min-width:90px;text-align:center}
+.cal-dates.cd-past{background:#ccc} .cal-dates.cd-exam{background:#1976d2}
+.cal-body{flex:1} .cal-title{font-weight:600;font-size:.85rem} .cal-sub{font-size:.76rem;color:var(--text-light);margin-top:2px}
+.cal-badge{padding:2px 8px;border-radius:4px;font-size:.7rem;font-weight:700;white-space:nowrap;align-self:center}
+.b-past{background:#f0f0f0;color:#aaa} .b-now{background:#fff3e0;color:var(--accent);animation:pulse 2s infinite} .b-future{background:#e3f2fd;color:#1565c0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.round-nav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+.round-btn{padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:.8rem;font-weight:600;transition:all .15s}
+.round-btn:hover{border-color:var(--primary);transform:translateY(-1px)} .round-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.round-btn.past{opacity:.45} .round-btn.past:hover{opacity:.75} .round-btn.current{border-color:var(--accent);box-shadow:0 0 0 2px rgba(232,145,58,.3)}
+.plan-slot{background:#f8f9fb;border-radius:8px;margin-bottom:8px;overflow:hidden}
+.plan-slot-top{display:flex;align-items:center;gap:8px;padding:7px 12px}
+.plan-slot select{flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:.82rem}
+.plan-slot .slot-num{font-weight:700;color:var(--primary);min-width:22px}
+.plan-slot .remove-btn{background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;padding:0 4px}
+.slot-info{padding:6px 12px 8px 40px;font-size:.76rem;border-top:1px solid #eee;display:flex;flex-wrap:wrap;gap:6px 16px}
+.slot-info .si-status{padding:2px 7px;border-radius:4px;font-weight:600}
+.slot-info .si-tb{color:var(--text-light);flex:1;min-width:200px}
+.slot-info .si-memo{color:var(--text-light);font-style:italic}
+.slot-info .si-link{color:#1565c0;text-decoration:none;font-weight:600}
+.slot-info .si-link:hover{text-decoration:underline}
+.add-btn{padding:5px 12px;border-radius:6px;border:1px dashed var(--border);background:transparent;cursor:pointer;font-size:.8rem;color:var(--text-light)}
+.add-btn:hover{border-color:var(--primary);color:var(--primary)}
+.actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.btn{padding:8px 16px;border-radius:8px;border:none;font-size:.84rem;font-weight:600;cursor:pointer;transition:all .15s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.btn-primary{background:var(--primary);color:#fff} .btn-primary:hover{background:var(--primary-light)}
+.btn-outline{background:transparent;border:2px solid var(--primary);color:var(--primary)} .btn-outline:hover{background:var(--primary);color:#fff}
+.btn-danger{background:var(--danger);color:#fff} .btn-danger:hover{opacity:.9}
+.exam-info{background:#e3f2fd;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:.83rem;color:#1565c0}
+.no-exam-info{background:#f5f5f5;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:.83rem;color:#999}
+/* Schooling */
+.sc-entry{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fb;border-radius:8px;margin-bottom:5px;flex-wrap:wrap}
+.sc-entry input[type=text]{flex:1;min-width:140px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:.82rem}
+.sc-entry input[type=number]{width:60px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:.82rem;text-align:center}
+.sc-entry select{padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:.82rem;min-width:100px}
+.sc-entry .remove-btn{background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;padding:0 4px}
+.sc-card{border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;font-size:.82rem;transition:all .2s}
+.sc-card:hover{border-color:var(--primary-light);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.sc-card .sc-type{font-weight:700;font-size:.9rem;color:var(--primary);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.sc-card .sc-type .sc-badge{font-size:.68rem;padding:2px 7px;border-radius:4px;font-weight:600}
+.sc-badge-open{background:#fff3e0;color:var(--accent)} .sc-badge-soon{background:#e3f2fd;color:#1565c0} .sc-badge-closed{background:#f5f5f5;color:#999} .sc-badge-ongoing{background:#e8f5e9;color:var(--success)}
+.sc-tbl{width:100%;border-collapse:collapse;font-size:.8rem}
+.sc-tbl td{padding:5px 10px;border-bottom:1px solid #f0f2f5;vertical-align:top}
+.sc-tbl td:nth-child(odd){font-weight:600;color:var(--text);white-space:nowrap;width:60px;background:#f9fafb}
+.sc-tbl td:nth-child(even){color:var(--text-light)}
+.sc-tbl tr:last-child td{border-bottom:none}
+.sc-card .sc-subj{margin-top:8px;font-size:.78rem;color:var(--text-light);border-top:1px solid #eee;padding-top:6px}
+.ai-output{width:100%;min-height:200px;font-family:'Consolas','Monaco',monospace;font-size:.78rem;padding:12px;border:1px solid var(--border);border-radius:8px;background:#f8f9fb;resize:vertical;line-height:1.5}
+@media(max-width:600px){.dash-grid{grid-template-columns:repeat(2,1fr)}.container{padding:12px}.tab{padding:9px 11px;font-size:.78rem}header{flex-direction:column;align-items:flex-start}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>学習計画管理</h1>
+  <div class="hdr-info">
+    <span>経済学部商業学科</span>
+    <span>在籍年次: <select id="year-select" onchange="changeYear(+this.value)"><option value="1">1年次</option><option value="2">2年次</option><option value="3">3年次</option><option value="4">4年次</option></select></span>
+    <span>年度: <select id="fy-select-hdr" onchange="changeFy(+this.value)"><option value="2026">2026年度</option><option value="2027">2027年度</option><option value="2028">2028年度</option><option value="2029">2029年度</option></select></span>
+    <span id="sync-status" class="sync-off" onclick="syncClick()" title="クリックで同期操作">同期未設定</span>
+  </div>
+</header>
+
+<div class="tabs" id="tabs"></div>
+
+<div id="page-home" class="page active"><div class="container">
+  <div id="alert-area"></div>
+  <div class="home-grid">
+    <div>
+      <div class="dash-grid" id="stats"></div>
+      <div class="card"><h3>卒業所要単位の充足状況</h3><table class="req-table" id="req-table"></table></div>
+      <div class="card"><h3>全体進捗</h3><div class="progress-bar" id="bar-all"></div>
+        <div class="legend"><span class="lg-done">単位修得</span><span class="lg-exam">試験準備中</span><span class="lg-report">リポート提出済</span><span class="lg-wip">学習中</span><span class="lg-no">未着手</span></div>
+      </div>
+      <div class="card"><h3>教養課程</h3><div class="progress-bar" id="bar-kyoyo"></div></div>
+      <div class="card"><h3>専門教育課程</h3><div class="progress-bar" id="bar-senmon"></div></div>
+    </div>
+    <div id="calendar-list"></div>
+  </div>
+</div></div>
+
+<div id="page-subjects" class="page"><div class="container">
+  <div class="filters" id="filter-bar"></div>
+  <div id="subject-list"></div>
+</div></div>
+
+<div id="page-schooling" class="page"><div class="container">
+  <div class="card">
+    <h3>スクーリング単位管理</h3>
+    <p style="font-size:.83rem;color:var(--text-light);margin-bottom:12px">卒業にはスクーリングで30単位以上の修得が必要です (年間登録上限49単位)。</p>
+    <div id="sc-req"></div>
+  </div>
+  <div class="card">
+    <h3>受講記録</h3>
+    <div id="sc-list"></div>
+    <button class="add-btn" onclick="addSc()" style="margin-top:8px">+ スクーリングを追加</button>
+  </div>
+  <div class="card">
+    <h3>2026年度 スクーリング日程一覧</h3>
+    <p style="font-size:.78rem;color:var(--text-light);margin-bottom:10px">出典: 法政通信4月号 / 学習のしおり2026 (号が発行され次第更新)</p>
+    <div id="sc-schedule"></div>
+  </div>
+</div></div>
+
+<div id="page-plan" class="page"><div class="container">
+  <div class="card"><h3>提出計画 / 単位修得試験</h3>
+    <p style="font-size:.82rem;color:var(--text-light);margin-bottom:12px">各回のリポート提出科目を計画。試験登録ありの回(*)のみ受験科目(最大3)も設定可。</p>
+    <div class="round-nav" id="round-nav"></div>
+  </div>
+  <div id="round-detail"></div>
+</div></div>
+
+<div id="page-settings" class="page"><div class="container">
+  <div class="card"><h3>基本設定</h3>
+    <p style="font-size:.84rem;margin:8px 0">年度: <select id="fy-select" onchange="changeFy(+this.value)"><option value="2026">2026年度</option><option value="2027">2027年度</option><option value="2028">2028年度</option><option value="2029">2029年度</option></select></p>
+    <p style="font-size:.82rem;color:var(--text-light)">年度を変更するとスケジュール表示が更新されます。科目データ・学習状況は保持されます。</p>
+  </div>
+  <div class="card"><h3>AI相談用エクスポート</h3>
+    <p style="font-size:.83rem;color:var(--text-light);margin-bottom:10px">現在の学習状況をテキスト形式で出力します。Claude等のAIにそのまま貼り付けて学習相談ができます。</p>
+    <div class="actions" style="margin-bottom:10px">
+      <button class="btn btn-primary" onclick="generateAIExport()">テキスト生成</button>
+      <button class="btn btn-outline" onclick="copyAIExport()">クリップボードにコピー</button>
+    </div>
+    <textarea class="ai-output" id="ai-output" readonly placeholder="「テキスト生成」を押すと学習状況のサマリーが表示されます"></textarea>
+  </div>
+  <div class="card"><h3>データ管理</h3>
+    <p style="font-size:.84rem;margin:8px 0">学習データはブラウザのローカルストレージに保存されます。</p>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="exportData()">JSONエクスポート</button>
+      <button class="btn btn-outline" onclick="document.getElementById('imp').click()">インポート</button>
+      <input type="file" id="imp" accept=".json" style="display:none" onchange="importData(event)">
+      <button class="btn btn-danger" onclick="resetData()">リセット</button>
+    </div>
+  </div>
+</div></div>
+
+<script>
+var ST=[{id:0,label:'未着手',c:'s0'},{id:1,label:'学習中',c:'s1'},{id:2,label:'リポート提出済',c:'s2'},{id:3,label:'試験準備中',c:'s3'},{id:4,label:'単位修得',c:'s4'}];
+// yr: min year to take the subject. Parsed as number for comparison.
+var SUBJ=[
+  {id:'k01',name:'文学',u:4,yr:1,cat:'kyoyo',group:'人文'},{id:'k02',name:'西洋史',u:4,yr:1,cat:'kyoyo',group:'人文'},
+  {id:'k03',name:'日本史',u:4,yr:1,cat:'kyoyo',group:'人文'},{id:'k04',name:'哲学',u:4,yr:1,cat:'kyoyo',group:'人文'},
+  {id:'k05',name:'東洋史',u:4,yr:1,cat:'kyoyo',group:'人文'},{id:'k06',name:'論理学',u:4,yr:1,cat:'kyoyo',group:'人文'},
+  {id:'k07',name:'法学(日本国憲法)',u:2,yr:1,cat:'kyoyo',group:'社会'},{id:'k08',name:'法学',u:2,yr:1,cat:'kyoyo',group:'社会'},
+  {id:'k09',name:'経済学',u:4,yr:1,cat:'kyoyo',group:'社会'},{id:'k10',name:'人文地理学',u:4,yr:1,cat:'kyoyo',group:'社会'},
+  {id:'k11',name:'自然地理学',u:4,yr:1,cat:'kyoyo',group:'社会'},{id:'k12',name:'政治学概論',u:4,yr:1,cat:'kyoyo',group:'社会'},
+  {id:'k13',name:'社会学',u:4,yr:1,cat:'kyoyo',group:'社会'},{id:'k14',name:'文化人類学',u:4,yr:1,cat:'kyoyo',group:'社会'},
+  {id:'k15',name:'心理学',u:4,yr:1,cat:'kyoyo',group:'社会'},
+  {id:'k16',name:'数学1',u:2,yr:1,cat:'kyoyo',group:'自然'},{id:'k17',name:'数学2',u:2,yr:1,cat:'kyoyo',group:'自然'},
+  {id:'k18',name:'生物学1',u:2,yr:1,cat:'kyoyo',group:'自然'},{id:'k19',name:'化学1',u:2,yr:1,cat:'kyoyo',group:'自然'},
+  {id:'k20',name:'化学2',u:2,yr:1,cat:'kyoyo',group:'自然'},{id:'k21',name:'物理学1',u:2,yr:1,cat:'kyoyo',group:'自然'},
+  {id:'k22',name:'物理学2',u:2,yr:1,cat:'kyoyo',group:'自然'},
+  {id:'k30',name:'英語2',u:2,yr:1,cat:'kyoyo',group:'外国語'},{id:'k31',name:'英語3',u:2,yr:1,cat:'kyoyo',group:'外国語'},
+  {id:'k32',name:'独語1',u:2,yr:1,cat:'kyoyo',group:'外国語'},{id:'k33',name:'仏語1',u:2,yr:1,cat:'kyoyo',group:'外国語'},
+  {id:'k40',name:'健康・スポーツ科学概論',u:2,yr:1,cat:'kyoyo',group:'保健体育'},
+  {id:'s01',name:'簿記I',u:2,yr:1,cat:'senmon',group:'選択必修',field:'会計'},{id:'s02',name:'簿記II',u:2,yr:1,cat:'senmon',group:'選択必修',field:'会計'},
+  {id:'s05',name:'経営学総論I',u:2,yr:1,cat:'senmon',group:'選択必修',field:'経営'},{id:'s06',name:'経営学総論II',u:2,yr:1,cat:'senmon',group:'選択必修',field:'経営'},
+  {id:'s07',name:'経営管理論I',u:2,yr:2,cat:'senmon',group:'選択必修',field:'経営'},{id:'s08',name:'経営管理論II',u:2,yr:2,cat:'senmon',group:'選択必修',field:'経営'},
+  {id:'s09',name:'金融論I',u:2,yr:2,cat:'senmon',group:'選択必修',field:'金融'},{id:'s10',name:'金融論II',u:2,yr:2,cat:'senmon',group:'選択必修',field:'金融'},
+  {id:'s03',name:'簿記III',u:2,yr:2,cat:'senmon',group:'選択必修',field:'会計'},{id:'s04',name:'簿記IV',u:2,yr:2,cat:'senmon',group:'選択必修',field:'会計'},
+  {id:'s11',name:'人的資源管理論I',u:2,yr:3,cat:'senmon',group:'選択',field:'経営'},{id:'s12',name:'人的資源管理論II',u:2,yr:3,cat:'senmon',group:'選択',field:'経営'},
+  {id:'s13',name:'財務会計論I',u:2,yr:3,cat:'senmon',group:'選択',field:'会計'},{id:'s14',name:'財務会計論II',u:2,yr:3,cat:'senmon',group:'選択',field:'会計'},
+  {id:'s15',name:'原価計算論I',u:2,yr:3,cat:'senmon',group:'選択',field:'会計'},{id:'s16',name:'原価計算論II',u:2,yr:3,cat:'senmon',group:'選択',field:'会計'},
+  {id:'s17',name:'管理会計論I',u:2,yr:3,cat:'senmon',group:'選択',field:'会計'},{id:'s18',name:'管理会計論II',u:2,yr:3,cat:'senmon',group:'選択',field:'会計'},
+  {id:'s19',name:'監査論I',u:2,yr:3,cat:'senmon',group:'選択',field:'会計'},{id:'s20',name:'監査論II',u:2,yr:3,cat:'senmon',group:'選択',field:'会計'},
+  {id:'s21',name:'税務会計I',u:2,yr:3,cat:'senmon',group:'選択',field:'会計'},{id:'s22',name:'税務会計II',u:2,yr:3,cat:'senmon',group:'選択',field:'会計'},
+  {id:'s23',name:'経営分析論I',u:2,yr:3,cat:'senmon',group:'選択',field:'経営'},{id:'s24',name:'経営分析論II',u:2,yr:3,cat:'senmon',group:'選択',field:'経営'},
+  {id:'s25',name:'国際金融論I',u:2,yr:3,cat:'senmon',group:'選択',field:'金融'},{id:'s26',name:'国際金融論II',u:2,yr:3,cat:'senmon',group:'選択',field:'金融'},
+  {id:'s27',name:'社会経済学I',u:2,yr:3,cat:'senmon',group:'選択',field:'経済'},{id:'s28',name:'社会経済学II',u:2,yr:3,cat:'senmon',group:'選択',field:'経済'},
+  {id:'s29',name:'経済史I',u:2,yr:3,cat:'senmon',group:'選択',field:'経済'},{id:'s30',name:'経済史II',u:2,yr:3,cat:'senmon',group:'選択',field:'経済'},
+  {id:'s31',name:'統計学I',u:2,yr:3,cat:'senmon',group:'選択',field:'経済'},{id:'s32',name:'統計学II',u:2,yr:3,cat:'senmon',group:'選択',field:'経済'},
+  {id:'s33',name:'財政学I',u:2,yr:3,cat:'senmon',group:'選択',field:'経済'},{id:'s34',name:'財政学II',u:2,yr:3,cat:'senmon',group:'選択',field:'経済'},
+  {id:'s35',name:'経済政策論I',u:2,yr:3,cat:'senmon',group:'選択',field:'経済'},{id:'s36',name:'経済政策論II',u:2,yr:3,cat:'senmon',group:'選択',field:'経済'},
+  {id:'s37',name:'日本経済論I',u:2,yr:3,cat:'senmon',group:'選択',field:'経済'},{id:'s38',name:'日本経済論II',u:2,yr:3,cat:'senmon',group:'選択',field:'経済'},
+  {id:'s39',name:'憲法',u:4,yr:3,cat:'senmon',group:'選択',field:'法律'},{id:'s40',name:'商法総則・商行為法',u:4,yr:3,cat:'senmon',group:'選択',field:'法律'},
+  {id:'s41',name:'会社法',u:4,yr:3,cat:'senmon',group:'選択',field:'法律'},{id:'s42',name:'手形法・小切手法',u:4,yr:3,cat:'senmon',group:'選択',field:'法律'},
+  {id:'s43',name:'労働法',u:4,yr:3,cat:'senmon',group:'選択',field:'法律'},
+];
+
+// ===== TEXTBOOK DATA (設題総覧2026) =====
+// haibon:配本のため市販なし, note:備考, title2/author2:2冊目
+var TEXTBOOKS={
+  'k01':{title:'和歌とは何か',author:'渡部泰明',pub:'岩波書店（岩波新書）',isbn:'',price:'¥960',hkCode:'S-001N'},
+  'k02':{title:'教養のための西洋史入門',author:'中井義明ほか',pub:'ミネルヴァ書房',isbn:'',price:'¥2,500',hkCode:'S-002N'},
+  'k03':{title:'大学でまなぶ日本の歴史',author:'木村茂光ほか編',pub:'吉川弘文館',isbn:'',price:'¥1,900',hkCode:'S-004N'},
+  'k04':{title:'哲学入門',author:'バートランド・ラッセル著／高村夏輝訳',pub:'筑摩書房（ちくま学芸文庫）',isbn:'',price:'¥1,100',hkCode:'S-005'},
+  'k05':{title:'中国史 新版（世界各国史3）',author:'尾形勇・岸本美緒編',pub:'山川出版社',isbn:'',price:'¥3,500',hkCode:'S-006'},
+  'k06':{title:'改訂版 論理学の初歩',author:'大貫義久・白根裕里枝・菅沢龍文・中釜浩一',pub:'梓出版社',isbn:'',price:'¥2,000',note:'生協取扱不可 → Amazon PODから購入'},
+  'k07':{title:'判例法学（第5版）',author:'西村健一郎・西井正弘・初宿正典',pub:'有斐閣',isbn:'',price:'¥2,800',hkCode:'S-008',note:'法学・法学(日本国憲法)で共通'},
+  'k08':{title:'判例法学（第5版）',author:'西村健一郎・西井正弘・初宿正典',pub:'有斐閣',isbn:'',price:'¥2,800',hkCode:'S-008',note:'法学・法学(日本国憲法)で共通'},
+  'k09':{title:'マンキュー入門経済学（第4版）',author:'N.G.マンキュー著／片桐満ほか訳',pub:'センゲージラーニング・東京化学同人',isbn:'',price:'¥3,600',hkCode:'S-184',note:'第3版も使用可。電子書籍版可'},
+  'k10':{title:'ジオグラフィー入門〔改訂新版〕',author:'高橋伸夫・谷内達・阿部和俊ほか',pub:'古今書院',isbn:'',price:'¥2,500',hkCode:'S-009'},
+  'k11':{title:'はじめての自然地理学（第2版）',author:'吉田英嗣',pub:'古今書院',isbn:'',price:'¥2,400',hkCode:'S-171'},
+  'k12':{title:'政治学（第2版）',author:'川出良枝・谷口将紀',pub:'東京大学出版会',isbn:'',price:'¥2,200',hkCode:'S-011'},
+  'k13':{title:'Do！ソシオロジー（改訂版）',author:'友枝敏雄・山田真茂留編',pub:'有斐閣（有斐閣アルマ）',isbn:'',price:'¥1,800',hkCode:'S-012'},
+  'k14':{title:'グローバリゼーションのなかの文化人類学案内',author:'中島成久編著',pub:'明石書店',isbn:'',price:'¥2,500',hkCode:'S-013N'},
+  'k15':{title:'ゼロからはじめる心理学・入門（改訂版）',author:'金沢創・市川寛子・作田由衣子',pub:'有斐閣（有斐閣ストゥディア）',isbn:'',price:'¥1,900',hkCode:'S-014N',note:'初版（2015年）も使用可'},
+  'k16':{title:'数学（第1版）',author:'安東祐希・池田宏一郎・倉田俊彦',pub:'通教テキスト',isbn:'',haibon:true,note:'数学1・2で同一テキスト（配本）'},
+  'k17':{title:'数学（第1版）',author:'安東祐希・池田宏一郎・倉田俊彦',pub:'通教テキスト',isbn:'',haibon:true,note:'数学1・2で同一テキスト（配本）'},
+  'k18':{title:'①グラフィックライフサイエンス（相川書房版）',author:'堀上英紀・月井雄二ほか',pub:'相川書房',isbn:'',price:'¥1,919',hkCode:'S-015N',title2:'②新種発見物語',author2:'島野智之・脇司編',pub2:'岩波書店（岩波ジュニア新書）',isbn2:'',price2:'¥1,120',hkCode2:'S-178',note:'2冊使用。①は法政生協書籍部のみ取扱い'},
+  'k19':{title:'グレイ 化学 ─物質と人間─',author:'H.B.Gray・J.D.Simon・W.C.Trogler',pub:'東京化学同人',isbn:'',price:'¥2,200',hkCode:'S-016',note:'化学1・2で同一テキスト'},
+  'k20':{title:'グレイ 化学 ─物質と人間─',author:'H.B.Gray・J.D.Simon・W.C.Trogler',pub:'東京化学同人',isbn:'',price:'¥2,200',hkCode:'S-016',note:'化学1・2で同一テキスト'},
+  'k21':{title:'グラフィック講義 力学の基礎',author:'和田純夫',pub:'サイエンス社（ライブラリ物理学グラフィック講義2）',isbn:'',price:'¥1,700',hkCode:'S-017N'},
+  'k22':{title:'新版 エネルギーの科学（第3版）',author:'安井伸郎',pub:'三共出版',isbn:'',price:'¥2,200',hkCode:'S-018N',note:'2025年4月よりテキスト変更済。第2版も使用可'},
+  'k30':{title:'Mystery Tour with Sherlock Holmes',author:'Atsuko Uemura, Miwako Yamashina',pub:'センゲージラーニング',isbn:'',price:'¥1,850',hkCode:'S-129N',note:'専用リポートノートあり。音声→ ngljapan.com/mtwsh-audio/'},
+  'k31':{title:'Good Reading, Better Grammar',author:'Joan McConnell, 山内圭',pub:'成美堂',isbn:'',price:'¥2,000',hkCode:'S-021N',note:'専用リポートノートあり'},
+  'k32':{title:'素朴なぎもんからわかるドイツ文法',author:'高田博行',pub:'郁文堂',isbn:'',price:'¥1,800',hkCode:'S-023',note:'専用リポートノートあり'},
+  'k33':{title:'ゼロから始めるフランス語（CD付）',author:'猪狩廣志',pub:'三修社',isbn:'',price:'¥1,600',hkCode:'S-024',note:'専用リポートノートあり'},
+  'k40':{title:'最新版・基礎から学ぶスポーツトレーニング理論',author:'伊藤マモル監修',pub:'日本文芸社',isbn:'',price:'¥2,400',hkCode:'S-173',note:'電子書籍版も使用可'},
+  's01':{title:'簿記I（第3版）',author:'永野則雄',pub:'通教テキスト',isbn:'',haibon:true,note:'専用リポートノートあり（配本）'},
+  's02':{title:'簿記II（第3版）',author:'永野則雄',pub:'通教テキスト',isbn:'',haibon:true,note:'専用リポートノートあり（配本）'},
+  's05':{title:'グロービスMBAマネジメント・ブック〔改訂3版〕',author:'グロービス経営大学院',pub:'ダイヤモンド社',isbn:'',price:'¥2,800',hkCode:'S-136',note:'経営学総論I・IIで同一テキスト'},
+  's06':{title:'グロービスMBAマネジメント・ブック〔改訂3版〕',author:'グロービス経営大学院',pub:'ダイヤモンド社',isbn:'',price:'¥2,800',hkCode:'S-136',note:'経営学総論I・IIで同一テキスト'},
+};
+
+// ===== SYLLABUS no_id MAP (2026年度 経済学部通教) =====
+var SYLLABUS={
+  'k01':2602299,'k02':2602300,'k03':2602301,'k04':2602302,'k05':2602303,'k06':2602304,
+  'k07':2602305,'k08':2602306,'k09':2602307,'k10':2602308,'k11':2602309,'k12':2602310,
+  'k13':2602311,'k14':2602312,'k15':2602313,'k16':2602314,'k17':2602315,'k18':2602316,
+  'k19':2602317,'k20':2602318,'k21':2602319,'k22':2602320,'k30':2602321,'k31':2602322,
+  'k32':2602323,'k33':2602324,'k40':2602325,
+  's01':2602485,'s02':2602486,'s03':2602493,'s04':2602494,'s05':2602487,'s06':2602488,
+  's07':2602489,'s08':2602490,'s09':2602491,'s10':2602492,'s11':2602495,'s12':2602496,
+  's13':2602497,'s14':2602498,'s15':2602499,'s16':2602500,'s17':2602501,'s18':2602502,
+  's19':2602503,'s20':2602504,'s21':2602505,'s22':2602506,'s23':2602507,'s24':2602508,
+  's25':2602509,'s26':2602510,'s27':2602511,'s28':2602512,'s29':2602513,'s30':2602514,
+  's31':2602515,'s32':2602516,'s33':2602517,'s34':2602518,'s35':2602519,'s36':2602520,
+  's37':2602521,'s38':2602522,'s39':2602523,'s40':2602526,'s41':2602527,'s42':2602528,
+  's43':2602529
+};
+function sylUrl(id){var n=SYLLABUS[id];return n?'https://syllabus.hosei.ac.jp/web/preview.php?no_id='+n+'&nendo=2026&gakubueng=TK&t_mode=pc':null;}
+
+// ===== Schedule template - dates are offset by (fy - 2026) years at runtime
+var SCH_TMPL=[
+  {r:1, sm:3,sd:1, em:3,ed:13, exam:{em:4,ed:17,label:'5月17日(日)',regEnd:'4/13'}, note:'年度リポート提出開始'},
+  {r:2, sm:3,sd:24,em:4,ed:18, exam:{em:5,ed:14,label:'6月14日(日)',regEnd:'5/18'}},
+  {r:3, sm:4,sd:20,em:5,ed:1,  exam:null},
+  {r:4, sm:5,sd:3, em:5,ed:15, exam:{em:6,ed:19,label:'7月19日(日)',regEnd:'6/15'}},
+  {r:5, sm:5,sd:19,em:6,ed:8,  exam:null, note:'9月卒業者最終リポート締切'},
+  {r:6, sm:6,sd:22,em:7,ed:20, exam:null},
+  {r:7, sm:7,sd:25,em:8,ed:7,  exam:{em:9,ed:4,label:'10月4日(日)',regEnd:'9/7'}},
+  {r:8, sm:8,sd:24,em:9,ed:8,  exam:{em:10,ed:8,label:'11月8日(日)',regEnd:'10/8'}},
+  {r:9, sm:9,sd:26,em:10,ed:10,exam:{em:11,ed:13,label:'12月13日(日)',regEnd:'11/10'}},
+  {r:10,sm:10,sd:25,em:11,ed:14,exam:{em:0,ed:24,label:'1月24日(日)',regEnd:'12/14'}},
+  {r:11,sm:11,sd:18,em:0,ed:8, exam:null, note:'年度成績最終リポート締切'},
+  {r:12,sm:2,sd:1, em:2,ed:15, exam:{em:3,ed:0,label:'4月(日程未定)',regEnd:'3/15'}, note:'設題最終提出',nextFy:true},
+];
+
+function buildSch(fy){
+  return SCH_TMPL.map(function(t){
+    var baseY=t.nextFy?fy+1:fy;
+    var sM=t.sm,eM=t.em;
+    var sY=sM>=3?baseY:baseY+1;
+    var eY=eM>=3?baseY:baseY+1;
+    var examObj=null;
+    if(t.exam){
+      var exM=t.exam.em;
+      var exY=exM>=3?baseY:baseY+1;
+      examObj={date:exY+'-'+(exM+1)+'-'+t.exam.ed,label:t.exam.label,regEnd:t.exam.regEnd};
+    }
+    return {r:t.r,s:sY+'-'+String(sM+1).padStart(2,'0')+'-'+String(t.sd).padStart(2,'0'),e:eY+'-'+String(eM+1).padStart(2,'0')+'-'+String(t.ed).padStart(2,'0'),exam:examObj,note:t.note||null};
+  });
+}
+
+var REQS=[
+  {id:'jinbun',label:'一般教育 / 人文分野',need:8,max:null,cat:'kyoyo',groups:['人文']},
+  {id:'shakai',label:'一般教育 / 社会分野',need:8,max:null,cat:'kyoyo',groups:['社会']},
+  {id:'shizen',label:'一般教育 / 自然分野',need:8,max:null,cat:'kyoyo',groups:['自然']},
+  {id:'ippan',label:'一般教育 小計',need:36,max:36,cat:'kyoyo',groups:['人文','社会','自然']},
+  {id:'gaikoku',label:'外国語',need:4,max:4,cat:'kyoyo',groups:['外国語']},
+  {id:'hoken',label:'保健体育',need:2,max:2,cat:'kyoyo',groups:['保健体育']},
+  {id:'kyoyo_total',label:'教養課程 合計',need:42,max:42,cat:'kyoyo',groups:null},
+  {id:'senhissu',label:'専門 / 選択必修',need:20,max:null,cat:'senmon',groups:['選択必修']},
+  {id:'senmon_total',label:'専門教育課程 合計',need:82,max:null,cat:'senmon',groups:null},
+  {id:'sc',label:'スクーリング修得単位',need:30,max:null,cat:'_sc',groups:null},
+  {id:'total',label:'卒業所要単位 合計',need:124,max:null,cat:null,groups:null},
+];
+
+// ===== STATE =====
+var state=loadState();
+function loadState(){try{var s=localStorage.getItem('hosei-sp4');if(s){var d=JSON.parse(s);if(!d.tbGot)d.tbGot={};if(!d.tbCustom)d.tbCustom={};return d;}}catch(e){}return{statuses:{},notes:{},plans:{},year:1,fy:2026,schooling:[],tbGot:{},tbCustom:{}};}
+function save(noSync){state._mt=Date.now();localStorage.setItem('hosei-sp4',JSON.stringify(state));if(!noSync)syncPushDebounced();}
+function getTbGot(id){return state.tbGot&&state.tbGot[id];}
+function setTbGot(id,v){if(!state.tbGot)state.tbGot={};state.tbGot[id]=v;save();renderSubjects();}
+function getTbCustom(id){return state.tbCustom&&state.tbCustom[id];}
+function setTbCustom(id,v){if(!state.tbCustom)state.tbCustom={};state.tbCustom[id]=v;save();}
+function getStatus(id){return state.statuses[id]||0;}
+function setStatus(id,v){state.statuses[id]=v;save();render();}
+function getNote(id){return state.notes[id]||'';}
+function setNote(id,v){state.notes[id]=v;save();}
+function getPlan(r){if(!state.plans[r])state.plans[r]={reports:[],exams:['','','']};return state.plans[r];}
+function isAvailable(s){return s.yr<=state.year;}
+function scTotal(){return(state.schooling||[]).reduce(function(a,e){return a+(e.done?e.u:0);},0);}
+
+function changeYear(v){state.year=v;save();render();}
+function changeFy(v){state.fy=v;save();document.getElementById('fy-select').value=v;document.getElementById('fy-select-hdr').value=v;render();}
+
+// ===== NAV =====
+var PAGES=[{id:'home',label:'ホーム'},{id:'subjects',label:'科目一覧'},{id:'plan',label:'提出計画'},{id:'schooling',label:'スクーリング'},{id:'settings',label:'設定'}];
+var curPage='home';
+function showPage(p){curPage=p;document.querySelectorAll('.page').forEach(function(el){el.classList.remove('active');});document.getElementById('page-'+p).classList.add('active');document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('active',t.dataset.p===p);});if(p==='plan')renderPlan();if(p==='schooling')renderSchooling();if(p==='home'){renderDashboard();renderCalendar();}}
+function initTabs(){document.getElementById('tabs').innerHTML=PAGES.map(function(p){return'<div class="tab '+(p.id===curPage?'active':'')+'" data-p="'+p.id+'" onclick="showPage(\''+p.id+'\')">'+p.label+'</div>';}).join('');}
+
+// ===== CALC =====
+function calcReq(req){
+  if(req.cat==='_sc')return{got:scTotal(),capped:scTotal(),need:req.need,ok:scTotal()>=req.need};
+  var subjects;
+  if(req.cat===null&&req.groups===null)subjects=SUBJ;
+  else if(req.groups===null)subjects=SUBJ.filter(function(s){return s.cat===req.cat;});
+  else subjects=SUBJ.filter(function(s){return s.cat===req.cat&&req.groups.indexOf(s.group)>=0;});
+  var got=subjects.filter(function(s){return getStatus(s.id)===4;}).reduce(function(a,s){return a+s.u;},0);
+  if(req.id==='total')got+=scTotal(); // add schooling to total... no wait, total should just be kyoyo+senmon
+  var capped=req.max?Math.min(got,req.max):got;
+  return{got:got,capped:capped,need:req.need,ok:capped>=req.need};
+}
+
+// ===== RENDER =====
+var curFilter='all',curRound=null;
+function toggleFilterDD(id){
+  var dd=document.getElementById('fdd-'+id);
+  var allDDs=document.querySelectorAll('.filter-dd');
+  for(var i=0;i<allDDs.length;i++){if(allDDs[i]!==dd)allDDs[i].classList.remove('show');}
+  dd.classList.toggle('show');
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.filter-group')){
+    var allDDs=document.querySelectorAll('.filter-dd');
+    for(var i=0;i<allDDs.length;i++)allDDs[i].classList.remove('show');
+  }
+});
+function render(){renderDashboard();renderSubjects();renderCalendar();if(curPage==='plan')renderPlan();if(curPage==='schooling')renderSchooling();}
+
+function renderDashboard(){
+  var counts=[0,0,0,0,0];SUBJ.forEach(function(s){counts[getStatus(s.id)]++;});
+  var tr=calcReq(REQS.find(function(r){return r.id==='total';}));
+  var avail=SUBJ.filter(function(s){return isAvailable(s);}).length;
+  document.getElementById('stats').innerHTML=
+    '<div class="stat" style="border-top-color:var(--primary)"><div class="num" style="color:var(--primary)">'+avail+'<span style="font-size:.9rem;color:var(--text-light);font-weight:600">/'+SUBJ.length+'</span></div><div class="label">履修可能/全科目</div></div>'+
+    '<div class="stat" style="border-top-color:var(--accent)"><div class="num" style="color:var(--accent)">'+(counts[1]+counts[2]+counts[3])+'</div><div class="label">学習中</div></div>'+
+    '<div class="stat" style="border-top-color:var(--success)"><div class="num" style="color:var(--success)">'+counts[4]+'</div><div class="label">修得済科目</div></div>'+
+    '<div class="stat" style="border-top-color:'+(tr.ok?'var(--success)':'var(--danger)')+'"><div class="num" style="color:'+(tr.ok?'var(--success)':'var(--danger)')+'">'+tr.capped+'<span style="font-size:.9rem;color:var(--text-light);font-weight:600">/'+tr.need+'</span></div><div class="label">修得/必要単位</div></div>'+
+    '<div class="stat" style="border-top-color:'+(scTotal()>=30?'var(--success)':'#1976d2')+'"><div class="num" style="color:'+(scTotal()>=30?'var(--success)':'#1976d2')+'">'+scTotal()+'<span style="font-size:.9rem;color:var(--text-light);font-weight:600">/30</span></div><div class="label">スクーリング</div></div>';
+
+  var tbody='';
+  REQS.forEach(function(req){
+    var r=calcReq(req);var pct=Math.min(100,Math.round(r.capped/r.need*100));
+    var isH=req.id.indexOf('total')>=0||req.id==='ippan';
+    var color=r.ok?'var(--success)':(pct>=50?'var(--accent)':'var(--danger)');
+    tbody+='<tr style="'+(isH?'font-weight:700;background:#f8f9fb':'')+'"><td>'+req.label+'</td><td style="text-align:right">'+r.capped+' / '+r.need+(req.max?' (上限'+req.max+')':'')+'</td><td style="width:110px"><div class="req-bar"><div class="req-bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div></td><td class="'+(r.ok?'ok':'ng')+'">'+(r.ok?'充足':'不足')+'</td></tr>';
+  });
+  document.getElementById('req-table').innerHTML='<tr><th>区分</th><th style="text-align:right">修得/必要</th><th>進捗</th><th>状態</th></tr>'+tbody;
+  mkBar('bar-all',SUBJ);mkBar('bar-kyoyo',SUBJ.filter(function(s){return s.cat==='kyoyo';}));mkBar('bar-senmon',SUBJ.filter(function(s){return s.cat==='senmon';}));
+
+  var today=td(),SCH=buildSch(state.fy),alertH='';
+  SCH.forEach(function(sch){
+    var start=pd(sch.s),end=pd(sch.e);
+    var dEnd=Math.round((end-today)/864e5),dStart=Math.round((start-today)/864e5);
+    if(today>=start&&today<=end)alertH+='<div class="alert alert-danger"><h4>現在提出期間中 - 第'+sch.r+'回</h4><p>'+fd(sch.s)+'~'+fd(sch.e)+' (締切まであと'+dEnd+'日)'+(sch.note?' / '+sch.note:'')+'</p></div>';
+    else if(dStart>0&&dStart<=7)alertH+='<div class="alert alert-warn"><h4>まもなく提出期間 - 第'+sch.r+'回</h4><p>'+fd(sch.s)+'~'+fd(sch.e)+' (あと'+dStart+'日で開始)'+(sch.note?' / '+sch.note:'')+'</p></div>';
+  });
+  document.getElementById('alert-area').innerHTML=alertH;
+}
+
+function mkBar(id,subjects){
+  var c=[0,0,0,0,0];subjects.forEach(function(s){c[getStatus(s.id)]++;});var t=subjects.length||1;
+  document.getElementById(id).innerHTML=(c[4]?'<div class="seg done" style="width:'+c[4]/t*100+'%">'+c[4]+'</div>':'')+(c[3]?'<div class="seg exam" style="width:'+c[3]/t*100+'%">'+c[3]+'</div>':'')+(c[2]?'<div class="seg report" style="width:'+c[2]/t*100+'%">'+c[2]+'</div>':'')+(c[1]?'<div class="seg wip" style="width:'+c[1]/t*100+'%">'+c[1]+'</div>':'');
+}
+
+function renderSubjects(){
+  var kyoyoChildren=['人文','社会','自然'];
+  var senmonChildren=['選択必修','選択'];
+  var statusChildren=[{k:'s0',l:'未着手'},{k:'s1',l:'学習中'},{k:'s2',l:'リポート提出済'},{k:'s3',l:'試験準備中'},{k:'s4',l:'単位修得'}];
+  var isKyoyoChild=kyoyoChildren.indexOf(curFilter)>=0;
+  var isSenmonChild=senmonChildren.indexOf(curFilter)>=0;
+  var isStatusChild=curFilter.charAt(0)==='s'&&curFilter.length===2;
+
+  function mkBtn(k,l){return'<button class="fbtn '+(curFilter===k?'active':'')+'" onclick="curFilter=\''+k+'\';renderSubjects()">'+l+'</button>';}
+  function mkGroup(id,label,children,childActive){
+    var h='<div class="filter-group" id="fg-'+id+'">';
+    h+='<button class="fbtn parent'+(childActive?' child-active':'')+'" onclick="toggleFilterDD(\''+id+'\')">'+label+'</button>';
+    h+='<div class="filter-dd" id="fdd-'+id+'">';
+    for(var i=0;i<children.length;i++){var c=children[i];var k=typeof c==='string'?c:c.k;var l=typeof c==='string'?c:c.l;h+=mkBtn(k,l);}
+    h+='</div></div>';return h;
+  }
+  var barH=mkBtn('all','すべて')+mkBtn('available','履修可能('+state.year+'年次)');
+  barH+=mkGroup('kyoyo','教養課程',kyoyoChildren,isKyoyoChild);
+  barH+=mkGroup('senmon','専門科目',senmonChildren,isSenmonChild);
+  barH+=mkGroup('status','学習状況',statusChildren,isStatusChild);
+  document.getElementById('filter-bar').innerHTML=barH;
+
+  var list=SUBJ;
+  if(curFilter==='available')list=SUBJ.filter(function(s){return isAvailable(s);});
+  else if(curFilter==='kyoyo')list=SUBJ.filter(function(s){return s.cat==='kyoyo';});
+  else if(curFilter==='senmon')list=SUBJ.filter(function(s){return s.cat==='senmon';});
+  else if(['人文','社会','自然','外国語','保健体育','選択必修','選択'].indexOf(curFilter)>=0)list=SUBJ.filter(function(s){return s.group===curFilter;});
+  else if(curFilter.charAt(0)==='s'&&curFilter.length===2){var si=parseInt(curFilter.charAt(1));list=SUBJ.filter(function(s){return getStatus(s.id)===si;});}
+
+  var groups={},gKeys=[];
+  list.forEach(function(s){var g=s.cat==='kyoyo'?'教養課程 / '+s.group:'専門科目 / '+s.group+(s.field?' / '+s.field:'');if(!groups[g]){groups[g]=[];gKeys.push(g);}groups[g].push(s);});
+
+  var html='';
+  for(var gi=0;gi<gKeys.length;gi++){
+    var groupName=gKeys[gi],subs=groups[groupName];
+    html+='<div class="sec-title">'+groupName+'</div>';
+    for(var si=0;si<subs.length;si++){
+      var s=subs[si],st=getStatus(s.id),avail=isAvailable(s);
+      var reqCls=s.group==='選択必修'?'req-senhissu':'req-sentaku';
+      var reqLabel=s.cat==='kyoyo'?'選択必修':s.group;
+      var opts='';for(var oi=0;oi<ST.length;oi++)opts+='<option value="'+ST[oi].id+'"'+(ST[oi].id===st?' selected':'')+'>'+ST[oi].label+'</option>';
+      var tb=TEXTBOOKS[s.id]||null;var tbGot=getTbGot(s.id);
+      var tbHtml='';
+      if(tb){
+        // Build info text
+        var infoLines=[];
+        var line1=tb.title+(tb.author?' ／ '+tb.author:'')+(tb.pub?' 【'+tb.pub+'】':'')+(tb.price?' '+tb.price:'');
+        if(tb.hkCode)line1+=' 生協コード:'+tb.hkCode;
+        infoLines.push(line1);
+        if(tb.title2){var line2=tb.title2+(tb.author2?' ／ '+tb.author2:'')+(tb.pub2?' 【'+tb.pub2+'】':'')+(tb.price2?' '+tb.price2:'');if(tb.hkCode2)line2+=' 生協コード:'+tb.hkCode2;infoLines.push(line2);}
+        var q=encodeURIComponent(tb.title+' '+(tb.author||''));
+        var amzUrl='https://www.amazon.co.jp/s?k='+q;
+        var ciniiUrl='https://ci.nii.ac.jp/books/search?q='+encodeURIComponent(tb.title)+'&lang=ja';
+        tbHtml='<div class="tb-row'+(tb.haibon?' tb-haibon':'')+(tbGot?' tb-row-got':'')+'"><span class="tb-title"><strong>📖教科書:</strong> ';
+        tbHtml+=infoLines.map(function(l){return esc(l);}).join('<br><span style="padding-left:52px">');
+        if(infoLines.length>1)tbHtml+=new Array(infoLines.length-1).join('</span>');
+        if(tb.note)tbHtml+=' <span style="color:var(--accent);font-size:.72rem">⚠ '+esc(tb.note)+'</span>';
+        tbHtml+='</span>';
+        if(tb.haibon){
+          tbHtml+='<span style="background:#e3f2fd;color:#1565c0;padding:2px 7px;border-radius:4px;font-size:.72rem;font-weight:600;white-space:nowrap">大学から配本</span>';
+        }
+        tbHtml+='<label class="tb-got-label'+(tbGot?' checked':'')+'"><input type="checkbox" '+(tbGot?'checked':'')+' onchange="setTbGot(\''+s.id+'\',this.checked)"> 入手済み</label>';
+        if(!tb.haibon){
+          tbHtml+='<span class="tb-links">';
+          tbHtml+='<a class="tb-link tb-link-amz" href="'+amzUrl+'" target="_blank">Amazon</a>';
+          tbHtml+='<a class="tb-link tb-link-cinii" href="'+ciniiUrl+'" target="_blank">CiNii図書</a>';
+          tbHtml+='<a class="tb-link tb-link-google" href="https://www.google.co.jp/search?q='+q+'+%E8%B3%BC%E5%85%A5" target="_blank">Google</a>';
+          tbHtml+='</span>';
+        }
+        var sylU=sylUrl(s.id);
+        if(sylU)tbHtml+='<span class="tb-links"><a class="tb-link tb-link-syl" href="'+sylU+'" target="_blank">シラバス</a></span>';
+        tbHtml+='</div>';
+      }else{
+        var q2=encodeURIComponent(s.name+' 法政大学通信');
+        tbHtml='<div class="tb-row"><span class="tb-nodata">📖教科書: 設題総覧で確認してください</span>';
+        tbHtml+='<span class="tb-links"><a class="tb-link tb-link-amz" href="https://www.amazon.co.jp/s?k='+encodeURIComponent(s.name)+'" target="_blank">Amazon</a>';
+        tbHtml+='<a class="tb-link tb-link-cinii" href="https://ci.nii.ac.jp/books/search?q='+q2+'&lang=ja" target="_blank">CiNii</a>';
+        tbHtml+='<a class="tb-link tb-link-google" href="https://www.google.co.jp/search?q='+encodeURIComponent(s.name+' テキスト')+'" target="_blank">Google</a>';
+        var sylU2=sylUrl(s.id);if(sylU2)tbHtml+='<a class="tb-link tb-link-syl" href="'+sylU2+'" target="_blank">シラバス</a>';
+        tbHtml+='</span></div>';
+      }
+      html+='<div class="subj'+(avail?'':' locked')+'"><div class="subj-name">'+s.name+(avail?'':' <span style="font-size:.7rem;color:var(--danger)">('+s.yr+'年次~)</span>')+(tbGot?' <span style="font-size:.68rem;background:#e8f5e9;color:var(--success);padding:1px 5px;border-radius:3px">📚入手済</span>':'')+'</div><div class="subj-meta">'+s.u+'単位 / '+s.yr+'年次~</div><span class="subj-req '+reqCls+'">'+reqLabel+'</span><select class="sel s'+st+'" onchange="setStatus(\''+s.id+'\',+this.value)"'+(avail?'':' disabled')+'>'+opts+'</select><div class="subj-note"><input type="text" placeholder="メモ..." value="'+esc(getNote(s.id))+'" onchange="setNote(\''+s.id+'\',this.value)"'+(avail?'':' disabled')+'></div>'+tbHtml+'</div>';
+    }
+  }
+  if(!list.length)html='<p style="text-align:center;padding:40px;color:var(--text-light)">該当なし</p>';
+  document.getElementById('subject-list').innerHTML=html;
+}
+
+// ===== SCHOOLING SUBJECTS (しおり2026 p.46-61) =====
+var SC_SUBJ=[
+  {cat:'教養',items:['数学3','生物学3','化学3','物理学3','基礎特講','英語S','独語S','仏語S','スポーツ総合演習','生物学2(メディア)']},
+  {cat:'専門/選択必修(メディア)',items:['マーケティング論I','マーケティング論II','経済学入門I','経済学入門II','統計学入門','会計学入門I','会計学入門II','経営戦略論I','経営戦略論II']},
+  {cat:'専門/選択(スクーリング)',items:['総合特講','経済学特講','経営学特講','情報学入門','総合外国語特講','スポーツ特講','消費者行動論','広告論','演習','他学部公開科目']},
+  {cat:'専門/選択(メディア)',items:['データサイエンス入門A','データサイエンス入門B','データサイエンス応用基礎A','データサイエンス応用基礎B','データサイエンス応用基礎C','情報学基礎','経営組織論','事業創造論','会計情報論I','会計情報論II','日本経営論','ファイナンス論I','ファイナンス論II','現代経済学I','現代経済学II','マクロ経済学I','マクロ経済学II','国際経済論I','国際経済論II','環境経済論I','環境経済論II']},
+];
+
+// ===== SCHOOLING SCHEDULE DATA (法政通信4月号 / しおり2026) =====
+var SC_SCHEDULE=[
+  {type:'春期スクーリング',period:'4/7(火)~7/22(水)',loc:'市ケ谷キャンパス',format:'夜間(6限18:35~ / 7限20:20~) 週1回x約14週',fee:'15,000円/科目',maxU:'最大12単位',
+   reg:'法政通信3月号にて案内済',regDate:null,
+   subj:'西洋史, 数学I, 社会学概論I, 英語S, 教育学A, 東洋史, 監査論, 経営管理論 ほか',source:'法政通信4月号 p.37-43'},
+  {type:'GWスクーリング',period:'5/4(月)~5/6(水)',loc:'市ケ谷キャンパス',format:'3日間集中 4コマ/日 1科目のみ',fee:'15,000円',maxU:'1科目',
+   reg:'法政通信3月号にて案内済',regDate:null,
+   subj:'(3月号参照)',source:'しおり p.74'},
+  {type:'大阪スクーリング',period:'5/22(金)~5/24(日)',loc:'大阪',format:'3日間集中 4コマ/日 1科目',fee:'20,000円',maxU:'1科目',
+   reg:'法政通信3月号にて案内済',regDate:null,
+   subj:'(3月号参照)',source:'しおり p.76'},
+  {type:'仙台スクーリング',period:'6/5(金)~6/7(日)',loc:'TKPガーデンシティPREMIUM仙台西口',format:'3日間集中 4コマ/日 1科目',fee:'20,000円',maxU:'1科目',
+   reg:'4/3(金)~4/16(木)',regDate:{s:'2026-04-03',e:'2026-04-16'},
+   subj:'化学(教養/全学科1~4年), 法律学特講, 総合特講 ほか',source:'法政通信4月号 p.29-33'},
+  {type:'前期週末スクーリング',period:'6/21(日),6/28(日),7/5(日)',loc:'市ケ谷キャンパス',format:'週末3回 4コマ/日 1科目',fee:'15,000円',maxU:'1科目',
+   reg:'5/3(日)~5/15(金)',regDate:{s:'2026-05-03',e:'2026-05-15'},
+   subj:'哲学(教養/全学科), 経済学特講 ほか',source:'法政通信4月号 p.33-38'},
+  {type:'前期メディアスクーリング',period:'4/7(火)~7/22(水)',loc:'オンライン(動画講義)',format:'全14~15回の動画視聴+課題提出',fee:'20,000円/科目',maxU:'複数可',
+   reg:'法政通信2月号にて案内済',regDate:null,
+   subj:'商法総則・商行為法, 労働法, 日本文学史II, 国際経済論I, 金融論A, 自然科学概論, 管理会計論I ほか',
+   note:'試験は会場試験(6/14 or 7/19), Web試験, リポート試験のいずれか(科目による)',source:'法政通信4月号 p.27-30'},
+  {type:'夏期スクーリング',period:'7/23(木)~8/8(土) [3群に分割]',loc:'市ケ谷キャンパス (1群はオンライン)',format:'6日間集中(3群は3日間) AM/PM/夜間',fee:'15,000円(対面) / 20,000円(オンライン)',maxU:'最大7科目',
+   reg:'法政通信5月号にて案内予定',regDate:null,
+   subj:'(5月号で発表)',source:'しおり p.73'},
+  {type:'札幌スクーリング',period:'10/10(土)~10/12(月)',loc:'札幌',format:'3日間集中',fee:'20,000円',maxU:'1科目',
+   reg:'法政通信7・8月号にて案内予定',regDate:null,subj:'(7・8月号で発表)',source:'しおり p.76'},
+  {type:'名古屋スクーリング',period:'10/31(土)~11/2(月)',loc:'名古屋',format:'3日間集中',fee:'20,000円',maxU:'1科目',
+   reg:'法政通信7・8月号にて案内予定',regDate:null,subj:'(7・8月号で発表)',source:'しおり p.76'},
+  {type:'秋期スクーリング',period:'9/18(金)~1/18(月)',loc:'市ケ谷キャンパス',format:'夜間 週1回x約14週',fee:'15,000円/科目',maxU:'最大12単位',
+   reg:'法政通信7・8月号にて案内予定',regDate:null,subj:'(7・8月号で発表)',source:'しおり p.72'},
+  {type:'後期メディアスクーリング',period:'10/1(木)~1/18(月)',loc:'オンライン',format:'全14~15回の動画視聴+課題提出',fee:'20,000円/科目',maxU:'複数可',
+   reg:'法政通信7・8月号にて案内予定',regDate:null,subj:'(7・8月号で発表)',source:'しおり p.77'},
+  {type:'後期週末スクーリング',period:'11/15(日),11/22(日),11/29(日)',loc:'オンライン',format:'週末3回(オンライン)',fee:'20,000円',maxU:'1科目',
+   reg:'法政通信9月号にて案内予定',regDate:null,subj:'(9月号で発表)',source:'しおり p.75'},
+  {type:'福岡スクーリング',period:'12/4(金)~12/6(日)',loc:'福岡',format:'3日間集中',fee:'20,000円',maxU:'1科目',
+   reg:'法政通信10・11月号にて案内予定',regDate:null,subj:'(10・11月号で発表)',source:'しおり p.76'},
+  {type:'冬期スクーリング',period:'1/19(火)~2/1(月) [2群に分割]',loc:'市ケ谷キャンパス (1群はオンライン)',format:'6日間集中 AM/PM/夜間',fee:'15,000円(対面) / 20,000円(オンライン)',maxU:'最大4科目',
+   reg:'法政通信10・11月号にて案内予定',regDate:null,subj:'(10・11月号で発表)',source:'しおり p.74'},
+];
+
+function getScBadge(sc){
+  if(!sc.regDate)return null;
+  var today=td(),s=pd(sc.regDate.s),e=pd(sc.regDate.e);
+  if(today>e)return{label:'申請終了',cls:'sc-badge-closed'};
+  if(today>=s&&today<=e)return{label:'申請受付中',cls:'sc-badge-open'};
+  var d=Math.round((s-today)/864e5);
+  if(d<=14)return{label:'あと'+d+'日で申請開始',cls:'sc-badge-soon'};
+  return null;
+}
+
+function renderScSchedule(){
+  var html='';
+  for(var i=0;i<SC_SCHEDULE.length;i++){
+    var sc=SC_SCHEDULE[i],badge=getScBadge(sc);
+    html+='<div class="sc-card"><div class="sc-type">'+sc.type;
+    if(badge)html+=' <span class="sc-badge '+badge.cls+'">'+badge.label+'</span>';
+    html+='</div><table class="sc-tbl">';
+    html+='<tr><td>期間</td><td>'+sc.period+'</td><td>会場</td><td>'+sc.loc+'</td></tr>';
+    html+='<tr><td>形式</td><td>'+sc.format+'</td><td>受講料</td><td>'+sc.fee+'</td></tr>';
+    html+='<tr><td>単位</td><td>'+sc.maxU+'</td><td>申請</td><td>'+sc.reg+'</td></tr>';
+    html+='</table>';
+    if(sc.subj)html+='<div class="sc-subj">開講科目: '+sc.subj+'</div>';
+    if(sc.note)html+='<div class="sc-subj" style="color:var(--accent)">'+sc.note+'</div>';
+    html+='<div style="font-size:.68rem;color:#aaa;margin-top:4px;text-align:right">'+sc.source+'</div>';
+    html+='</div>';
+  }
+  document.getElementById('sc-schedule').innerHTML=html;
+}
+
+// ===== SCHOOLING RECORDS =====
+function scSubjOpts(selected){
+  var h='<option value="">-- 科目を選択 --</option><option value="__custom"'+(selected==='__custom'?' selected':'')+'>手動入力...</option>';
+  for(var c=0;c<SC_SUBJ.length;c++){
+    h+='<optgroup label="'+SC_SUBJ[c].cat+'">';
+    for(var j=0;j<SC_SUBJ[c].items.length;j++){var n=SC_SUBJ[c].items[j];h+='<option value="'+n+'"'+(selected===n?' selected':'')+'>'+n+'</option>';}
+    h+='</optgroup>';
+  }
+  return h;
+}
+function renderSchooling(){
+  renderScSchedule();
+  if(!state.schooling)state.schooling=[];
+  var total=scTotal(),cnt=state.schooling.length,doneC=state.schooling.filter(function(e){return e.done;}).length;
+  var pct=Math.min(100,Math.round(total/30*100));
+  var color=total>=30?'var(--success)':(pct>=50?'var(--accent)':'var(--danger)');
+  document.getElementById('sc-req').innerHTML='<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap"><div style="font-size:1.4rem;font-weight:800;color:'+color+'">'+total+' / 30 単位</div><div style="flex:1;min-width:120px"><div class="req-bar" style="height:12px"><div class="req-bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div></div><div style="font-size:.82rem;color:var(--text-light)">'+doneC+'/'+cnt+'科目修得済</div></div>';
+
+  var html='';
+  var scSt=[{v:'planning',l:'受講予定'},{v:'enrolled',l:'受講中'},{v:'done',l:'修得済'}];
+  for(var i=0;i<state.schooling.length;i++){
+    var e=state.schooling[i];
+    var isCustom=e.customName||false;
+    var selVal=isCustom?'__custom':(e.name||'');
+    var stOpts='';for(var j=0;j<scSt.length;j++)stOpts+='<option value="'+scSt[j].v+'"'+(e.status===scSt[j].v?' selected':'')+'>'+scSt[j].l+'</option>';
+    html+='<div class="sc-entry">';
+    html+='<select onchange="scSelectSubj('+i+',this.value)" style="min-width:180px">'+scSubjOpts(selVal)+'</select>';
+    if(isCustom)html+='<input type="text" placeholder="科目名を入力" value="'+esc(e.name||'')+'" onchange="updateSc('+i+',\'name\',this.value)" style="min-width:120px">';
+    html+='<input type="number" min="1" max="8" value="'+(e.u||2)+'" onchange="updateSc('+i+',\'u\',+this.value)"><span style="font-size:.78rem;color:var(--text-light)">単位</span>';
+    html+='<select onchange="updateSc('+i+',\'status\',this.value)">'+stOpts+'</select>';
+    html+='<input type="text" placeholder="時期・メモ" value="'+esc(e.memo||'')+'" onchange="updateSc('+i+',\'memo\',this.value)" style="min-width:100px">';
+    html+='<button class="remove-btn" onclick="removeSc('+i+')">x</button></div>';
+  }
+  if(!state.schooling.length)html='<p style="text-align:center;padding:20px;color:var(--text-light);font-size:.85rem">まだスクーリングの記録がありません</p>';
+  document.getElementById('sc-list').innerHTML=html;
+}
+function scSelectSubj(i,val){
+  if(val==='__custom'){state.schooling[i].customName=true;state.schooling[i].name='';}
+  else{state.schooling[i].customName=false;state.schooling[i].name=val;}
+  save();renderSchooling();
+}
+function addSc(){if(!state.schooling)state.schooling=[];state.schooling.push({name:'',u:2,status:'planning',memo:'',done:false,customName:false});save();renderSchooling();}
+function removeSc(i){state.schooling.splice(i,1);save();renderSchooling();render();}
+function updateSc(i,key,val){
+  state.schooling[i][key]=val;
+  state.schooling[i].done=(state.schooling[i].status==='done');
+  save();renderSchooling();
+  if(key==='status'||key==='u')render(); // update dashboard
+}
+
+// ===== ROUND PLANNER =====
+function renderPlan(){
+  var today=td(),SCH=buildSch(state.fy);
+  if(curRound===null){for(var i=0;i<SCH.length;i++){if(today<=pd(SCH[i].e)){curRound=SCH[i].r;break;}}if(curRound===null)curRound=1;}
+  var navH='';
+  for(var i=0;i<SCH.length;i++){var sch=SCH[i],s=pd(sch.s),e=pd(sch.e);var cls='round-btn';if(today>e)cls+=' past';else if(today>=s&&today<=e)cls+=' current';if(sch.r===curRound)cls+=' active';navH+='<button class="'+cls+'" onclick="curRound='+sch.r+';renderPlan()">'+sch.r+'回'+(sch.exam?' *':'')+'</button>';}
+  document.getElementById('round-nav').innerHTML=navH+'<div style="font-size:.73rem;color:var(--text-light);width:100%;margin-top:4px">* = 試験登録あり</div>';
+
+  var sch=SCH.find(function(x){return x.r===curRound;});
+  var plan=getPlan(curRound);
+  var schEnd=pd(sch.e);
+  var isPast=today>schEnd;
+  var subjOpts='<option value="">-- 科目を選択 --</option>';
+  for(var i=0;i<SUBJ.length;i++){var av=isAvailable(SUBJ[i]);subjOpts+='<option value="'+SUBJ[i].id+'"'+(av?'':' disabled')+'>'+SUBJ[i].name+' ('+SUBJ[i].u+'単位)'+(av?'':' ['+SUBJ[i].yr+'年次~]')+'</option>';}
+
+  var html='<div class="card"><h3>第'+curRound+'回 : '+fd(sch.s)+' ~ '+fd(sch.e)+'</h3>';
+  if(isPast)html+='<div style="background:#fce4ec;color:var(--danger);padding:8px 12px;border-radius:6px;font-size:.83rem;font-weight:600;margin-bottom:6px">この回の提出期限は終了しています ('+fd(sch.e)+'締切)</div>';
+  if(sch.note)html+='<p style="font-size:.82rem;color:var(--danger);margin-bottom:4px">'+sch.note+'</p>';
+  html+='</div>';
+  html+='<div class="card"><h4 style="color:var(--accent);margin-bottom:10px">リポート提出科目</h4>';
+  for(var i=0;i<plan.reports.length;i++){var sid=plan.reports[i]||'';html+='<div class="plan-slot"><div class="plan-slot-top"><span class="slot-num">'+(i+1)+'</span><select onchange="updateReport('+curRound+','+i+',this.value)">'+subjOpts.replace('value="'+sid+'"','value="'+sid+'" selected')+'</select><button class="remove-btn" onclick="removeReport('+curRound+','+i+')">x</button></div>'+slotInfoHtml(sid)+'</div>';}
+  html+='<button class="add-btn" onclick="addReport('+curRound+')">+ 科目を追加</button></div>';
+
+  if(sch.exam){
+    html+='<div class="card"><div class="exam-info">試験登録あり : <strong>試験日 '+sch.exam.label+'</strong> / 登録締切 '+sch.exam.regEnd+'</div><h4 style="color:#1565c0;margin-bottom:10px">単位修得試験 受験科目 (最大3)</h4>';
+    for(var i=0;i<3;i++){var sid=plan.exams[i]||'';html+='<div class="plan-slot"><div class="plan-slot-top"><span class="slot-num">'+(i+1)+'</span><select onchange="updateExam('+curRound+','+i+',this.value)">'+subjOpts.replace('value="'+sid+'"','value="'+sid+'" selected')+'</select></div>'+slotInfoHtml(sid)+'</div>';}
+    html+='</div>';
+  }else{html+='<div class="card"><div class="no-exam-info">この回に対応する試験登録はありません</div></div>';}
+
+  var rS=plan.reports.filter(function(x){return x;}).map(function(id){return SUBJ.find(function(s){return s.id===id;});}).filter(Boolean);
+  var eS=(sch.exam?plan.exams:[]).filter(function(x){return x;}).map(function(id){return SUBJ.find(function(s){return s.id===id;});}).filter(Boolean);
+  html+='<div class="card"><h4 style="margin-bottom:8px">この回のまとめ</h4><p style="font-size:.86rem">リポート: '+rS.length+'科目 ('+rS.reduce(function(a,s){return a+s.u;},0)+'単位)';
+  if(sch.exam)html+=' / 試験: '+eS.length+'科目 ('+eS.reduce(function(a,s){return a+s.u;},0)+'単位)';
+  html+='</p>';
+  if(rS.length)html+='<p style="font-size:.8rem;color:var(--text-light);margin-top:3px">'+rS.map(function(s){return s.name;}).join(', ')+'</p>';
+  if(eS.length)html+='<p style="font-size:.8rem;color:var(--text-light);margin-top:2px">'+eS.map(function(s){return s.name;}).join(', ')+'</p>';
+  html+='</div>';
+  document.getElementById('round-detail').innerHTML=html;
+}
+function slotInfoHtml(sid){
+  if(!sid)return '';
+  var s=SUBJ.find(function(x){return x.id===sid;});
+  if(!s)return '';
+  var st=getStatus(sid);var stObj=ST.find(function(x){return x.id===st;});
+  var stColors=['#f5f5f5,#888','#fff8e1,#f57f17','#fff3e0,#e65100','#e3f2fd,#1565c0','#e8f5e9,#2e7d32'];
+  var sc=stColors[st].split(',');
+  var html='<div class="slot-info">';
+  html+='<span class="si-status" style="background:'+sc[0]+';color:'+sc[1]+'">'+stObj.label+'</span>';
+  var tb=TEXTBOOKS[sid];
+  if(tb){
+    var tbText=tb.haibon?'📖'+tb.title+'（配本）':'📖'+tb.title+(tb.price?' '+tb.price:'');
+    if(tb.title2)tbText+=' / '+tb.title2;
+    var tbGot=getTbGot(sid);
+    html+='<span class="si-tb">'+esc(tbText)+(tbGot?' <span style="color:var(--success);font-weight:600">✓入手済</span>':'')+'</span>';
+    if(!tb.haibon){
+      var q=encodeURIComponent(tb.title+' '+(tb.author||''));
+      html+='<a class="si-link" href="https://www.amazon.co.jp/s?k='+q+'" target="_blank">Amazon</a>';
+      html+='<a class="si-link" href="https://www.google.co.jp/search?q='+q+'" target="_blank">Google</a>';
+    }
+  }
+  var sylS=sylUrl(sid);if(sylS)html+='<a class="si-link si-link-syl" href="'+sylS+'" target="_blank">シラバス</a>';
+  var memo=getNote(sid);
+  if(memo)html+='<span class="si-memo">メモ: '+esc(memo)+'</span>';
+  html+='</div>';
+  return html;
+}
+function addReport(r){var p=getPlan(r);p.reports.push('');save();renderPlan();}
+function removeReport(r,i){var p=getPlan(r);p.reports.splice(i,1);save();renderPlan();}
+function updateReport(r,i,v){var p=getPlan(r);p.reports[i]=v;save();renderPlan();}
+function updateExam(r,i,v){var p=getPlan(r);p.exams[i]=v;save();renderPlan();}
+
+// ===== CALENDAR =====
+function renderCalendar(){
+  var today=td(),SCH=buildSch(state.fy);
+  // Build items: report periods + exam dates
+  var items=[];
+  SCH.forEach(function(sch){
+    items.push({type:'report',r:sch.r,s:sch.s,e:sch.e,exam:sch.exam,note:sch.note});
+    if(sch.exam&&sch.exam.date){
+      items.push({type:'exam',r:sch.r,s:sch.exam.date,e:sch.exam.date,label:sch.exam.label,regEnd:sch.exam.regEnd});
+    }
+  });
+  // Group by month
+  var months={},mKeys=[];
+  items.forEach(function(it){
+    var d=pd(it.s);var key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    var label=d.getFullYear()+'年'+(d.getMonth()+1)+'月';
+    if(!months[key]){months[key]={label:label,items:[]};mKeys.push(key);}
+    months[key].items.push(it);
+  });
+  mKeys.sort();
+  function renderItem(it){
+    var start=pd(it.s),end=pd(it.e);
+    var badge,bc,ciCls;
+    if(today>end){badge='終了';bc='b-past';ciCls='ci-past';}
+    else if(today>=start&&today<=end){badge=it.type==='exam'?'本日試験':'受付中';bc='b-now';ciCls='ci-now';}
+    else{badge='予定';bc='b-future';ciCls='ci-future';}
+    var h='';
+    if(it.type==='report'){
+      h+='<div class="cal-item '+ciCls+'"><div class="cal-dates'+(ciCls==='ci-past'?' cd-past':'')+'">'+fd(it.s)+' ~ '+fd(it.e)+'</div><div class="cal-body"><div class="cal-title">第'+it.r+'回 リポート提出</div>';
+      var subs=[];
+      if(it.exam)subs.push('試験登録期間 (試験日: '+it.exam.label+' / 締切: '+it.exam.regEnd+')');
+      if(it.note)subs.push('<span style="color:var(--danger)">'+it.note+'</span>');
+      if(subs.length)h+='<div class="cal-sub">'+subs.join('<br>')+'</div>';
+      h+='</div><span class="cal-badge '+bc+'">'+badge+'</span></div>';
+    }else{
+      h+='<div class="cal-item '+ciCls+'"><div class="cal-dates cd-exam">'+fd(it.s)+'</div><div class="cal-body"><div class="cal-title">単位修得試験 (第'+it.r+'回対応)</div>';
+      h+='<div class="cal-sub">登録締切: '+it.regEnd+'</div>';
+      h+='</div><span class="cal-badge '+bc+'">'+badge+'</span></div>';
+    }
+    return h;
+  }
+  function isMonthPast(m){return m.items.every(function(it){return today>pd(it.e);});}
+  var pastHtml='',curHtml='';
+  for(var mi=0;mi<mKeys.length;mi++){
+    var m=months[mKeys[mi]];
+    var block='<div class="card"><h3>'+m.label+'</h3>';
+    for(var ii=0;ii<m.items.length;ii++)block+=renderItem(m.items[ii]);
+    block+='</div>';
+    if(isMonthPast(m))pastHtml+=block;else curHtml+=block;
+  }
+  var html='';
+  if(pastHtml)html+='<div class="cal-past-toggle" onclick="togglePast(this)">▸ 過去の月を表示</div><div class="cal-past-wrap">'+pastHtml+'</div>';
+  html+=curHtml;
+  document.getElementById('calendar-list').innerHTML=html;
+}
+function togglePast(el){var w=el.nextElementSibling;var open=w.classList.toggle('show');el.innerHTML=(open?'▾':'▸')+' '+(open?'過去の月を折りたたむ':'過去の月を表示');}
+
+// ===== UTILS =====
+function pd(s){var p=(s||'').split('-');return new Date(+p[0],+p[1]-1,+p[2]);} // parse YYYY-MM-DD as LOCAL date
+function td(){var d=new Date();d.setHours(0,0,0,0);return d;} // today at 00:00 local
+function fd(s){var d=pd(s);return(d.getMonth()+1)+'/'+d.getDate();}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function exportData(){var b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='study-plan-'+new Date().toISOString().slice(0,10)+'.json';a.click();}
+function importData(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){try{state=JSON.parse(ev.target.result);save();initUI();render();alert('インポート完了');}catch(err){alert('読込失敗');}};r.readAsText(f);e.target.value='';}
+function resetData(){if(confirm('すべてのデータをリセットしますか?')){state={statuses:{},notes:{},plans:{},year:1,fy:2026,schooling:[]};save();initUI();render();}}
+
+// ===== MIGRATE =====
+(function(){try{
+  ['hosei-study-planner','hosei-sp2','hosei-sp3'].forEach(function(key){
+    var old=localStorage.getItem(key);
+    if(old&&!localStorage.getItem('hosei-sp4')){var d=JSON.parse(old);state.statuses=d.statuses||{};state.notes=d.notes||{};if(d.plans)state.plans=d.plans;save();}
+  });
+}catch(e){}})();
+
+function initUI(){
+  document.getElementById('year-select').value=state.year;
+  document.getElementById('fy-select').value=state.fy;
+  document.getElementById('fy-select-hdr').value=state.fy;
+}
+
+// ===== AI EXPORT =====
+function generateAIExport(){
+  var lines=[];
+  lines.push('# 法政大学通信教育部 学習状況レポート');
+  lines.push('学部: 経済学部商業学科 / 在籍年次: '+state.year+'年次 / 年度: '+state.fy+'年度');
+  lines.push('出力日: '+new Date().toLocaleDateString('ja-JP'));
+  lines.push('');
+
+  // Graduation requirements
+  lines.push('## 卒業要件の充足状況 (必要124単位+スクーリング30単位)');
+  REQS.forEach(function(req){var r=calcReq(req);lines.push('- '+req.label+': '+r.capped+'/'+r.need+'単位 '+(r.ok?'[充足]':'[不足]'));});
+  lines.push('');
+
+  // Per-status summary
+  var stCounts=[0,0,0,0,0];SUBJ.forEach(function(s){stCounts[getStatus(s.id)]++;});
+  lines.push('## 科目ステータス概要');
+  lines.push('未着手: '+stCounts[0]+' / 学習中: '+stCounts[1]+' / リポート提出済: '+stCounts[2]+' / 試験準備中: '+stCounts[3]+' / 単位修得: '+stCounts[4]);
+  lines.push('');
+
+  // Active subjects (not 未着手 and not 修得済)
+  var active=SUBJ.filter(function(s){var st=getStatus(s.id);return st>=1&&st<=3;});
+  if(active.length){
+    lines.push('## 現在取り組み中の科目');
+    active.forEach(function(s){
+      var st=getStatus(s.id);var label=ST.find(function(x){return x.id===st;}).label;
+      var note=getNote(s.id);
+      lines.push('- '+s.name+' ('+s.u+'単位/'+s.group+') ['+label+']'+(note?' メモ: '+note:''));
+    });
+    lines.push('');
+  }
+
+  // Completed subjects
+  var done=SUBJ.filter(function(s){return getStatus(s.id)===4;});
+  if(done.length){
+    lines.push('## 修得済科目 ('+done.length+'科目/'+done.reduce(function(a,s){return a+s.u;},0)+'単位)');
+    done.forEach(function(s){lines.push('- '+s.name+' ('+s.u+'単位/'+s.group+')');});
+    lines.push('');
+  }
+
+  // Untouched but available
+  var untouched=SUBJ.filter(function(s){return getStatus(s.id)===0&&isAvailable(s);});
+  if(untouched.length){
+    lines.push('## 履修可能だが未着手の科目 ('+untouched.length+'科目)');
+    var byGrp={};untouched.forEach(function(s){var g=s.group;if(!byGrp[g])byGrp[g]=[];byGrp[g].push(s);});
+    Object.keys(byGrp).forEach(function(g){lines.push('- '+g+': '+byGrp[g].map(function(s){return s.name;}).join(', '));});
+    lines.push('');
+  }
+
+  // Round plans
+  var SCH=buildSch(state.fy);
+  var hasPlans=false;
+  SCH.forEach(function(sch){
+    var p=state.plans[sch.r];if(!p)return;
+    var reps=p.reports.filter(Boolean).map(function(id){return SUBJ.find(function(s){return s.id===id;});}).filter(Boolean);
+    var exams=(sch.exam&&p.exams?p.exams:[]).filter(Boolean).map(function(id){return SUBJ.find(function(s){return s.id===id;});}).filter(Boolean);
+    if(!reps.length&&!exams.length)return;
+    if(!hasPlans){lines.push('## 回別計画');hasPlans=true;}
+    lines.push('### 第'+sch.r+'回 ('+fd(sch.s)+'~'+fd(sch.e)+')');
+    if(reps.length)lines.push('リポート: '+reps.map(function(s){return s.name;}).join(', '));
+    if(exams.length)lines.push('試験: '+exams.map(function(s){return s.name;}).join(', '));
+  });
+  if(hasPlans)lines.push('');
+
+  // Schooling records
+  if(state.schooling&&state.schooling.length){
+    lines.push('## スクーリング受講記録 (修得'+scTotal()+'/30単位)');
+    var scSt={planning:'受講予定',enrolled:'受講中',done:'修得済'};
+    state.schooling.forEach(function(e){
+      lines.push('- '+(e.name||'(未入力)')+' '+e.u+'単位 ['+scSt[e.status]+']'+(e.memo?' '+e.memo:''));
+    });
+    lines.push('');
+  }
+
+  lines.push('---');
+  lines.push('上記の状況を踏まえて学習計画について相談したいです。');
+
+  document.getElementById('ai-output').value=lines.join('\n');
+}
+
+function copyAIExport(){
+  var ta=document.getElementById('ai-output');
+  if(!ta.value){generateAIExport();}
+  ta.select();document.execCommand('copy');
+  alert('クリップボードにコピーしました');
+}
+
+// === PWA Service Worker ===
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(e){console.log('SW reg failed:',e);});
+  });
+}
+
+// === Google Drive Sync ===
+var CONFIG={CLIENT_ID:''}; // ←ここにGoogle Cloud ConsoleのOAuthクライアントIDを貼る
+var SYNC={gapiReady:false,gisReady:false,tokenClient:null,token:null,fileId:null,pushTimer:null,busy:false};
+
+function syncSetStatus(cls,txt){
+  var el=document.getElementById('sync-status');if(!el)return;
+  el.className=cls;el.textContent=txt;
+}
+function syncInit(){
+  if(!CONFIG.CLIENT_ID){syncSetStatus('sync-off','同期未設定');return;}
+  if(!navigator.onLine){syncSetStatus('sync-err','⚠オフライン');}
+  var tryStart=function(){
+    if(typeof gapi==='undefined'||typeof google==='undefined'||!google.accounts)return setTimeout(tryStart,300);
+    gapi.load('client',function(){
+      gapi.client.init({discoveryDocs:['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']}).then(function(){
+        SYNC.gapiReady=true;
+        SYNC.tokenClient=google.accounts.oauth2.initTokenClient({
+          client_id:CONFIG.CLIENT_ID,
+          scope:'https://www.googleapis.com/auth/drive.appdata',
+          callback:function(resp){
+            if(resp.error){syncSetStatus('sync-err','⚠認証失敗');return;}
+            SYNC.token=resp.access_token;
+            gapi.client.setToken({access_token:SYNC.token});
+            syncPull();
+          }
+        });
+        SYNC.gisReady=true;
+        var saved=localStorage.getItem('hosei-sp4-token');
+        if(saved){try{var t=JSON.parse(saved);if(t.exp>Date.now()){SYNC.token=t.tok;gapi.client.setToken({access_token:t.tok});syncPull();return;}}catch(e){}}
+        syncSetStatus('sync-off','○未ログイン');
+      });
+    });
+  };
+  tryStart();
+}
+function syncClick(){
+  if(!CONFIG.CLIENT_ID){alert('同期を使うにはCONFIG.CLIENT_IDを設定してください');return;}
+  if(!SYNC.token){syncLogin();}else{syncPull();}
+}
+function syncLogin(){
+  if(!SYNC.tokenClient){alert('準備中です');return;}
+  SYNC.tokenClient.requestAccessToken({prompt:'consent'});
+}
+function syncLogout(){
+  SYNC.token=null;localStorage.removeItem('hosei-sp4-token');SYNC.fileId=null;
+  syncSetStatus('sync-off','○未ログイン');
+}
+function syncFindFile(){
+  return gapi.client.drive.files.list({spaces:'appDataFolder',q:"name='state.json'",fields:'files(id,modifiedTime)'}).then(function(r){
+    var f=r.result.files&&r.result.files[0];SYNC.fileId=f?f.id:null;return f||null;
+  });
+}
+function syncPull(){
+  if(!SYNC.token)return;
+  SYNC.busy=true;syncSetStatus('sync-busy','⟳同期中');
+  syncFindFile().then(function(f){
+    if(!f){return syncPush(true);}
+    return gapi.client.drive.files.get({fileId:f.id,alt:'media'}).then(function(r){
+      var remote;try{remote=typeof r.result==='string'?JSON.parse(r.result):r.result;}catch(e){remote=null;}
+      if(remote&&remote._mt&&(!state._mt||remote._mt>state._mt)){
+        state=remote;localStorage.setItem('hosei-sp4',JSON.stringify(state));
+        initUI();render();
+      }else if(state._mt&&(!remote||!remote._mt||state._mt>remote._mt)){
+        return syncPush(true);
+      }
+      SYNC.busy=false;syncSetStatus('sync-ok','●同期済');
+      localStorage.setItem('hosei-sp4-token',JSON.stringify({tok:SYNC.token,exp:Date.now()+55*60*1000}));
+    });
+  }).catch(function(e){SYNC.busy=false;syncSetStatus('sync-err','⚠エラー');console.log(e);});
+}
+function syncPush(silent){
+  if(!SYNC.token)return Promise.resolve();
+  SYNC.busy=true;if(!silent)syncSetStatus('sync-busy','⟳同期中');
+  var body=JSON.stringify(state);
+  var meta={name:'state.json'};if(!SYNC.fileId)meta.parents=['appDataFolder'];
+  var boundary='-------sp4boundary';
+  var delim='\r\n--'+boundary+'\r\n';var close='\r\n--'+boundary+'--';
+  var multi=delim+'Content-Type: application/json\r\n\r\n'+JSON.stringify(meta)+delim+'Content-Type: application/json\r\n\r\n'+body+close;
+  var path='/upload/drive/v3/files'+(SYNC.fileId?'/'+SYNC.fileId:'')+'?uploadType=multipart';
+  return gapi.client.request({path:path,method:SYNC.fileId?'PATCH':'POST',params:{uploadType:'multipart'},headers:{'Content-Type':'multipart/related; boundary='+boundary},body:multi}).then(function(r){
+    if(r.result&&r.result.id)SYNC.fileId=r.result.id;
+    SYNC.busy=false;syncSetStatus('sync-ok','●同期済');
+  }).catch(function(e){SYNC.busy=false;syncSetStatus('sync-err','⚠エラー');console.log(e);});
+}
+function syncPushDebounced(){
+  if(!SYNC.token)return;
+  if(SYNC.pushTimer)clearTimeout(SYNC.pushTimer);
+  SYNC.pushTimer=setTimeout(function(){syncPush();},3000);
+}
+window.addEventListener('online',function(){if(SYNC.token)syncPull();});
+window.addEventListener('offline',function(){syncSetStatus('sync-err','⚠オフライン');});
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&SYNC.token&&!SYNC.busy)syncPull();});
+
+initTabs();initUI();render();syncInit();
+</script>
+</body>
+</html>

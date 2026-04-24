@@ -1,0 +1,15 @@
+{
+  "name": "学習計画管理 - 法政大学通信",
+  "short_name": "学習計画",
+  "description": "法政大学通信教育部の学習進捗・提出計画管理",
+  "start_url": "./study-planner.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#1a3a5c",
+  "background_color": "#f5f7fa",
+  "lang": "ja",
+  "icons": [
+    {"src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+  ]
+}
